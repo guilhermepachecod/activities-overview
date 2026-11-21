@@ -80,7 +80,7 @@ main (int argc, char **argv)
 
   gtk_init (&argc, &argv);
 
-  app = gtk_application_new (AO_APP_ID, G_APPLICATION_DEFAULT_FLAGS);
+  app = gtk_application_new (AO_APP_ID, G_APPLICATION_FLAGS_NONE);
 
   if (!g_application_register (G_APPLICATION (app), NULL, &error))
     {
