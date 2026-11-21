@@ -35,7 +35,8 @@ jobs:
           - name: AlmaLinux 9
             image: almalinux:9
             setup: |
-              dnf install -y epel-release
+              dnf install -y dnf-plugins-core epel-release
+              dnf config-manager --set-enabled crb
               dnf install -y --allowerasing \
                 gcc meson ninja-build pkgconf-pkg-config \
                 glib2-devel gtk3-devel libwnck3-devel \
