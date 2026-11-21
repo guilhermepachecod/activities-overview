@@ -5,6 +5,13 @@
 
 #define AO_APP_ID "io.github.guilhermepachecod.ActivitiesOverview"
 
+/* G_APPLICATION_DEFAULT_FLAGS only exists since GLib 2.74; older GLib
+ * (e.g. AlmaLinux 9) only has the now-deprecated G_APPLICATION_FLAGS_NONE,
+ * which is the same value. */
+#ifndef G_APPLICATION_DEFAULT_FLAGS
+#define G_APPLICATION_DEFAULT_FLAGS G_APPLICATION_FLAGS_NONE
+#endif
+
 static void
 action_toggle (GSimpleAction *action,
                GVariant      *parameter,
@@ -80,7 +87,7 @@ main (int argc, char **argv)
 
   gtk_init (&argc, &argv);
 
-  app = gtk_application_new (AO_APP_ID, G_APPLICATION_FLAGS_NONE);
+  app = gtk_application_new (AO_APP_ID, G_APPLICATION_DEFAULT_FLAGS);
 
   if (!g_application_register (G_APPLICATION (app), NULL, &error))
     {
