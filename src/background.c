@@ -11,9 +11,12 @@ typedef struct
 } AoBackgroundData;
 
 static void
-ao_background_data_free (gpointer data)
+ao_background_data_free (gpointer  data,
+                          GClosure *closure)
 {
   AoBackgroundData *bg = data;
+
+  (void) closure;
 
   g_clear_object (&bg->wallpaper);
   g_free (bg);
@@ -73,5 +76,5 @@ ao_background_attach (GtkWidget *window,
   g_object_unref (settings);
 
   g_signal_connect_data (window, "draw", G_CALLBACK (on_draw), bg,
-                          (GClosureNotify) ao_background_data_free, 0);
+                          ao_background_data_free, 0);
 }
