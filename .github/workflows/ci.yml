@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Debian 12
+            image: debian:12
+            setup: |
+              apt-get update
+              apt-get install -y --no-install-recommends \
+                build-essential meson ninja-build pkg-config \
+                libglib2.0-dev libgtk-3-dev libwnck-3-dev \
+                libx11-dev libxcomposite-dev libxdamage-dev \
+                libxrender-dev libxi-dev libxfixes-dev
+          - name: Debian 13
+            image: debian:13
+            setup: |
+              apt-get update
+              apt-get install -y --no-install-recommends \
+                build-essential meson ninja-build pkg-config \
+                libglib2.0-dev libgtk-3-dev libwnck-3-dev \
+                libx11-dev libxcomposite-dev libxdamage-dev \
+                libxrender-dev libxi-dev libxfixes-dev
+          - name: AlmaLinux 9
+            image: almalinux:9
+            setup: |
+              dnf install -y epel-release
+              dnf install -y --allowerasing \
+                gcc meson ninja-build pkgconf-pkg-config \
+                glib2-devel gtk3-devel libwnck3-devel \
+                libX11-devel libXcomposite-devel libXdamage-devel \
+                libXrender-devel libXi-devel libXfixes-devel
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: ${{ matrix.setup }}
+
+      - name: Configure
+        run: meson setup build
+
+      - name: Build
+        run: meson compile -C build
+
+      - name: Test
+        run: meson test -C build --print-errorlogs

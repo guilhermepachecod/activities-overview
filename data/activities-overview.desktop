@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Activities Overview
+Comment=GNOME Activities-style overview for MATE
+Exec=activities-overview --daemon
+Icon=view-fullscreen
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+Categories=System;
