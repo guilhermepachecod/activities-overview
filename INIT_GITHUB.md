@@ -1,156 +1,138 @@
-# INIT_GITHUB — Setup do repositório e fluxo de push
+# INIT_GITHUB — Repository setup and git workflow
 
-Repositório: https://github.com/guilhermepachecod/activities-overview
-Remote (SSH): `git@github.com:guilhermepachecod/activities-overview.git`
-Branch principal: `main`
+Upstream: https://github.com/guilhermepachecod/activities-overview
+Main branch: `main`
 
-Leia também o `PROJECT.md` (escopo e convenções do projeto).
+This file is meant for humans **and** coding agents working on this project. Read `PROJECT.md` first.
 
 ---
 
-## 1. Setup inicial (executar uma única vez)
+## 0. Golden rule: never break the host's configuration
 
-O repositório no GitHub foi criado **vazio** (sem README, LICENSE nem .gitignore). Não há nada para fazer pull antes do primeiro push.
+This project is developed on other people's machines and servers. Agents and scripts **must not change any existing configuration**. Always validate first, and act only on what is missing.
 
+- **Never** run `git config --global` or `git config --system`.
+- **Never** overwrite an existing value (`user.name`, `user.email`, remotes, credential helpers, SSH keys, `~/.gitconfig`, `~/.ssh/`).
+- **Never** generate SSH keys, tokens or credential helpers on your own.
+- If something required is missing or failing, **stop and ask the user**. Do not improvise workarounds.
+
+---
+
+## 1. Initial setup (once)
+
+### 1.1 Check the existing state
 ```bash
-cd ~/activities-overview          # diretório do projeto, onde estão PROJECT.md e INIT_GITHUB.md
-
-git init
-git branch -M main
-git config user.name  "Guilherme Pacheco"
-git config user.email "<email do GitHub>"   # confirmar com o usuário se não estiver configurado globalmente
-
-git remote add origin git@github.com:guilhermepachecod/activities-overview.git
-ssh -T git@github.com              # deve responder "Hi guilhermepachecod!"
+git rev-parse --is-inside-work-tree 2>/dev/null && echo "repo: exists" || echo "repo: missing"
+git config user.name  || echo "user.name: missing"
+git config user.email || echo "user.email: missing"
+git remote get-url origin 2>/dev/null || echo "origin: missing"
 ```
 
-### Arquivos obrigatórios no primeiro commit
-1. **`.gitignore`**
-   ```gitignore
-   # Meson / build
-   build/
-   builddir/
-   _build/
-   *.o
-   *.so
-   *.a
-   compile_commands.json
+### 1.2 Act only on what is missing
+| Item | Missing → action | Exists → action |
+|---|---|---|
+| Repo | `git init && git branch -M main` | nothing |
+| `user.name` / `user.email` | **ask the user** for the values, then set them **locally only**: `git config user.name "..."` / `git config user.email "..."` | nothing |
+| `origin` | `git remote add origin https://github.com/guilhermepachecod/activities-overview.git` (or the user's fork URL) | **keep it as is**, whether it is HTTPS or SSH |
 
-   # Empacotamento
-   *.deb
-   *.rpm
-   *.buildinfo
-   *.changes
-   debian/.debhelper/
-   debian/activities-overview/
-   debian/files
-   debian/*.substvars
-   debian/*.log
+### 1.3 `.gitignore` (create it if missing; if it exists, only append the lines that are missing)
+```gitignore
+build/
+builddir/
+*.o
+*.so
+*.a
+compile_commands.json
+*.deb
+*.rpm
+debian/.debhelper/
+debian/activities-overview/
+debian/files
+debian/*.substvars
+debian/*.log
+.vscode/
+.idea/
+*.swp
+*~
+core
+vgcore.*
+```
 
-   # Editores / SO
-   .vscode/
-   .idea/
-   *.swp
-   *~
-   .DS_Store
-
-   # Debug
-   core
-   vgcore.*
-   *.log
-   ```
-2. **`LICENSE`**: texto completo da GPL-2.0 (https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt). O projeto é GPL-2.0-or-later.
-3. **`README.md`** (em inglês): nome, a descrição abaixo, status "work in progress", dependências e build com meson.
-   > GNOME Activities-style overview for MATE and the Marco window manager: press Super to zoom out all windows, switch workspaces, and type to search apps. Lightweight C/GTK3, X11, no Clutter.
-4. `PROJECT.md` e `INIT_GITHUB.md`
-
+### 1.4 First commit and push
 ```bash
-git add .gitignore LICENSE README.md PROJECT.md INIT_GITHUB.md
-git commit -m "chore: initial project brief, license and readme"
+git add .
+git commit -m "chore: initial commit"
 git push -u origin main
 ```
 
-### Ajustes no GitHub (feitos pelo usuário ou via `gh`)
-```bash
-gh repo edit guilhermepachecod/activities-overview \
-  --description "GNOME Activities-style overview for MATE and the Marco window manager: press Super to zoom out all windows, switch workspaces, and type to search apps. Lightweight C/GTK3, X11, no Clutter." \
-  --add-topic mate,mate-desktop,marco,x11,gtk3,libwnck,activities,overview,workspace-switcher,app-launcher
-```
+### 1.5 If the push fails
+**Stop and report the error to the user.** Common causes, for the user to decide on:
+- `Permission denied (publickey)`: `origin` uses SSH and the machine has no key registered on GitHub. The user can switch to HTTPS with `git remote set-url origin https://github.com/<owner>/activities-overview.git`, or register a key.
+- `Authentication failed` over HTTPS: there is no credential or token configured.
+- `rejected (fetch first)`: the remote has commits you don't have. Run `git pull --rebase origin main` and push again.
 
 ---
 
-## 2. Fluxo padrão: TODA alteração termina em push
-
-Regra: **nenhum trabalho fica só local.** Ao concluir cada unidade lógica de trabalho (uma feature, um fix, um passo de um marco do roadmap), siga os passos abaixo.
+## 2. Standard workflow: every change ends with a push
 
 ```bash
-# 1. Sincronizar antes de começar
-git pull --rebase origin main
+git pull --rebase origin main          # sync before starting
 
-# 2. ... fazer as alterações ...
+# ... changes ...
 
-# 3. Garantir que compila e passa nos testes (quando já existir meson.build)
-meson setup build --wipe 2>/dev/null || meson setup build
-meson compile -C build
+meson compile -C build                 # once meson.build exists
 meson test -C build
 
-# 4. Revisar o que vai entrar
 git status
-git diff
-
-# 5. Commit (Conventional Commits, em inglês)
-git add <arquivos específicos>        # evitar "git add ." às cegas
+git add <files>
 git commit -m "feat(grid): animate windows from real geometry to grid"
-
-# 6. Push
 git push origin main
 ```
 
-### Regras
-- **Não fazer push com build quebrado.** Se não compila, não sobe. A exceção é o M0, antes de existir código.
-- **Commits pequenos e atômicos**: um assunto por commit.
-- **Nunca** commitar `build/`, binários, `.deb`/`.rpm`, credenciais, tokens ou chaves.
-- **Nunca** usar `git push --force` na `main`. Se o push for rejeitado, faça `git pull --rebase origin main`, resolva os conflitos e tente de novo.
-- Ao fechar um marco do roadmap (M0, M1…), mencionar no commit: `feat: complete M2 window grid (#M2)`.
-- Depois do push, conferir o resultado do CI: `gh run list --limit 1` / `gh run watch`.
+### Rules
+- No work stays local only: every finished logical unit gets a commit and a push.
+- Do not push a broken build.
+- Keep commits small, one topic per commit.
+- Never commit `build/`, binaries, `.deb`/`.rpm` files, credentials or tokens.
+- Never `git push --force` to `main`. If the push is rejected: `git pull --rebase origin main`, resolve the conflicts, then push again.
+- When a roadmap milestone is completed, say so in the commit: `feat: complete M2 window grid`.
+- CI status can be checked on the repository's **Actions** tab, or with `gh run list --limit 1` if `gh` is already authenticated. Do not try to authenticate `gh` yourself.
 
-### Prefixos de commit
-| Prefixo | Uso |
+### Commit prefixes (Conventional Commits, in English)
+| Prefix | Use |
 |---|---|
-| `feat:` | Nova funcionalidade |
-| `fix:` | Correção de bug |
-| `perf:` | Desempenho |
-| `refactor:` | Refatoração sem mudar comportamento |
-| `build:` | meson, dependências, empacotamento |
+| `feat:` | New feature |
+| `fix:` | Bug fix |
+| `perf:` | Performance |
+| `refactor:` | Refactoring with no behavior change |
+| `build:` | meson, dependencies, packaging |
 | `ci:` | GitHub Actions |
-| `docs:` | README, PROJECT.md, comentários |
-| `test:` | Testes |
-| `chore:` | Manutenção geral |
+| `docs:` | README, PROJECT.md |
+| `test:` | Tests |
+| `chore:` | General maintenance |
 
-Escopo opcional entre parênteses: `grid`, `search`, `workspaces`, `superkey`, `thumbnail`, `layout`, `anim`, `packaging`.
+Optional scope: `grid`, `search`, `workspaces`, `superkey`, `thumbnail`, `layout`, `anim`, `packaging`.
 
 ---
 
-## 3. Releases (a partir do M8)
+## 3. Releases (from M8 on, maintainer only)
 
 ```bash
-# atualizar a versão em meson.build (project(... version: 'X.Y.Z'))
+# update the version in meson.build
 git commit -am "build: bump version to 0.1.0"
 git tag -a v0.1.0 -m "v0.1.0"
 git push origin main --tags
 ```
-A tag `v*` dispara o workflow `release.yml`, que gera o `.deb` e o `.rpm` e anexa ao GitHub Release.
-
-Versionamento: SemVer. Use `0.x` até o MVP (M1–M6) estar completo e `1.0.0` quando os critérios de aceite do `PROJECT.md` forem atingidos.
+A `v*` tag triggers `release.yml`, which builds the `.deb` and `.rpm` packages and attaches them to the GitHub Release.
+Versioning follows SemVer: `0.x` until the MVP is done, `1.0.0` once the acceptance criteria in `PROJECT.md` are met.
 
 ---
 
-## 4. Branches (opcional, quando o projeto crescer)
+## 4. External contributors
 
-Enquanto for um mantenedor só, o trabalho vai direto na `main`. Para mudanças grandes ou experimentais:
+Fork the repo, work in a branch and open a PR against `main`:
 ```bash
 git switch -c feat/workspace-dnd
-# ... commits ...
 git push -u origin feat/workspace-dnd
-gh pr create --fill --base main
 ```
+Then open the PR on GitHub (or with `gh pr create --fill --base main` if `gh` is already authenticated).
